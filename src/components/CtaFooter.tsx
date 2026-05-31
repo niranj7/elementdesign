@@ -113,7 +113,7 @@ const CtaFooter: React.FC = () => {
       <div className="relative z-20 w-full max-w-6xl mx-auto px-6 mt-32 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* Left copyright info */}
         <p className="text-white/40 text-xs font-body tracking-wider cursor-default">
-          &copy; 2026 Studio. All rights reserved.
+          &copy; 2026 Element Designs. All rights reserved.
         </p>
 
         {/* Right footer links */}
