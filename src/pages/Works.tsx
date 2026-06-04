@@ -7,6 +7,7 @@ import { ArrowLeft, LogOut, Laptop, Tablet, Smartphone, ExternalLink, RefreshCw,
 import { motion, AnimatePresence } from "motion/react";
 import feature1 from "@/assets/feature-1.gif";
 import feature2 from "@/assets/feature-2.gif";
+import { getValue, setValue, initializeStore } from "@/lib/db";
 
 interface ShowcaseProject {
   id: string;
@@ -28,52 +29,44 @@ const Works: React.FC = () => {
   const [viewType, setViewType] = useState<"live" | "static">("static");
   const [iframeKey, setIframeKey] = useState(0);
 
-  // Authenticate Session & Load Showcases
+  // Load Showcases & Optional Session
   useEffect(() => {
     const currentSession = getSession();
-    if (!currentSession) {
-      toast({
-        variant: "destructive",
-        title: "Access Restricted",
-        description: "Please sign in to view the interactive showcase.",
-      });
-      navigate("/auth");
-      return;
-    }
     setSession(currentSession);
 
-    // Load Showcases
-    const saved = localStorage.getItem("element_designs_projects");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setShowcases(parsed);
-      if (parsed.length > 0) {
-        setActiveProject(parsed[0]);
+    const loadData = async () => {
+      await initializeStore();
+      const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
+      if (saved && saved.length > 0) {
+        setShowcases(saved);
+        setActiveProject(saved[0]);
+      } else {
+        // Default fallback if empty
+        const defaultShowcases: ShowcaseProject[] = [
+          {
+            id: "1",
+            title: "High-Performance Website Development",
+            category: "Web Development",
+            websiteLink: "#contact",
+            imageType: "finlytic",
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "2",
+            title: "Data-Driven Digital Marketing",
+            category: "Digital Marketing",
+            websiteLink: "#contact",
+            imageType: "wealth",
+            createdAt: new Date().toISOString(),
+          },
+        ];
+        await setValue("element_designs_projects", defaultShowcases);
+        setShowcases(defaultShowcases);
+        setActiveProject(defaultShowcases[0]);
       }
-    } else {
-      // Default fallback if empty
-      const defaultShowcases: ShowcaseProject[] = [
-        {
-          id: "1",
-          title: "High-Performance Website Development",
-          category: "Web Development",
-          websiteLink: "#contact",
-          imageType: "finlytic",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          title: "Data-Driven Digital Marketing",
-          category: "Digital Marketing",
-          websiteLink: "#contact",
-          imageType: "wealth",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      localStorage.setItem("element_designs_projects", JSON.stringify(defaultShowcases));
-      setShowcases(defaultShowcases);
-      setActiveProject(defaultShowcases[0]);
-    }
+    };
+
+    loadData();
   }, [navigate, toast]);
 
   // Auto-detect mobile screen for optimized preview defaults
@@ -102,10 +95,10 @@ const Works: React.FC = () => {
     setIframeKey((prev) => prev + 1);
   };
 
-  if (!session || !activeProject) {
+  if (!activeProject) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white/50 text-sm">
-        Verifying credential envelope...
+        Loading showcase showroom...
       </div>
     );
   }
@@ -140,22 +133,31 @@ const Works: React.FC = () => {
         </div>
 
         {/* User Identity info & Logout Action */}
-        <div className="flex items-center justify-between md:justify-end gap-4 bg-white/[0.02] border border-white/5 rounded-2xl px-4 py-2.5">
-          <div className="flex flex-col items-start md:items-end text-left md:text-right">
-            <span className="text-[9px] uppercase tracking-wider text-white/30 font-medium">Active Member</span>
-            <span className="text-xs font-mono text-white/70 font-light truncate max-w-[200px]" title={session.email}>
-              {session.email}
-            </span>
+        {session ? (
+          <div className="flex items-center justify-between md:justify-end gap-4 bg-white/[0.02] border border-white/5 rounded-2xl px-4 py-2.5">
+            <div className="flex flex-col items-start md:items-end text-left md:text-right">
+              <span className="text-[9px] uppercase tracking-wider text-white/30 font-medium">Active Member</span>
+              <span className="text-xs font-mono text-white/70 font-light truncate max-w-[200px]" title={session.email}>
+                {session.email}
+              </span>
+            </div>
+            <div className="h-8 w-px bg-white/10" />
+            <button
+              onClick={handleLogout}
+              className="liquid-glass rounded-xl px-3.5 py-1.5 text-xs text-white/60 hover:text-red-400 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Logout
+            </button>
           </div>
-          <div className="h-8 w-px bg-white/10" />
-          <button
-            onClick={handleLogout}
-            className="liquid-glass rounded-xl px-3.5 py-1.5 text-xs text-white/60 hover:text-red-400 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+        ) : (
+          <Link
+            to="/auth"
+            className="liquid-glass rounded-xl px-4 py-2 text-xs text-white/70 hover:text-white border border-white/5 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
           >
-            <LogOut className="h-3.5 w-3.5" />
-            Logout
-          </button>
-        </div>
+            Client Sign In
+          </Link>
+        )}
       </div>
 
       {/* Main Studio Workbench Grid */}

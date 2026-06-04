@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, Mail, Send, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getValue, setValue } from "@/lib/db";
 
 const ContactForm: React.FC = () => {
   const [name, setName] = useState("");
@@ -58,9 +59,10 @@ const ContactForm: React.FC = () => {
       console.warn("Supabase insertion failed, saving to local fallback storage:", err);
     } finally {
       // 3. Always store in local fallback registry to be accessible in Admin Panel
-      const localSubmissions = JSON.parse(localStorage.getItem("element_designs_contact_submissions") || "[]");
+      const existing = await getValue<any[]>("element_designs_contact_submissions");
+      const localSubmissions = existing || [];
       localSubmissions.unshift(submission);
-      localStorage.setItem("element_designs_contact_submissions", JSON.stringify(localSubmissions));
+      await setValue("element_designs_contact_submissions", localSubmissions);
 
       setLoading(false);
       setSubmitted(true);

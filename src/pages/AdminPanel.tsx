@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getSession, authService } from "@/lib/supabase";
 import feature1 from "@/assets/feature-1.gif";
 import feature2 from "@/assets/feature-2.gif";
+import { getValue, setValue, initializeStore } from "@/lib/db";
 
 export interface ShowcaseProject {
   id: string;
@@ -65,30 +66,36 @@ const AdminPanel: React.FC = () => {
       return;
     }
 
-    const saved = localStorage.getItem("element_designs_projects");
-    if (saved) {
-      setShowcases(JSON.parse(saved));
-    } else {
-      localStorage.setItem("element_designs_projects", JSON.stringify(DEFAULT_SHOWCASES));
-      setShowcases(DEFAULT_SHOWCASES);
-    }
+    const loadData = async () => {
+      await initializeStore();
+      
+      const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
+      if (saved) {
+        setShowcases(saved);
+      } else {
+        await setValue("element_designs_projects", DEFAULT_SHOWCASES);
+        setShowcases(DEFAULT_SHOWCASES);
+      }
 
-    const savedLeads = localStorage.getItem("element_designs_contact_submissions");
-    if (savedLeads) {
-      setLeads(JSON.parse(savedLeads));
-    }
+      const savedLeads = await getValue<any[]>("element_designs_contact_submissions");
+      if (savedLeads) {
+        setLeads(savedLeads);
+      }
+    };
+
+    loadData();
   }, [navigate]);
 
   // Save Helper
-  const saveShowcases = (updated: ShowcaseProject[]) => {
-    localStorage.setItem("element_designs_projects", JSON.stringify(updated));
+  const saveShowcases = async (updated: ShowcaseProject[]) => {
+    await setValue("element_designs_projects", updated);
     setShowcases(updated);
   };
 
-  const handleDeleteLead = (index: number) => {
+  const handleDeleteLead = async (index: number) => {
     const updated = [...leads];
     updated.splice(index, 1);
-    localStorage.setItem("element_designs_contact_submissions", JSON.stringify(updated));
+    await setValue("element_designs_contact_submissions", updated);
     setLeads(updated);
     toast({
       title: "Lead Removed",
@@ -158,7 +165,7 @@ const AdminPanel: React.FC = () => {
   };
 
   // Submit Handler
-  const handlePublish = (e: React.FormEvent) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !websiteLink.trim()) {
       toast({
@@ -195,7 +202,7 @@ const AdminPanel: React.FC = () => {
     };
 
     const updated = [newShowcase, ...showcases];
-    saveShowcases(updated);
+    await saveShowcases(updated);
 
     // Reset Form
     setTitle("");
@@ -209,9 +216,9 @@ const AdminPanel: React.FC = () => {
   };
 
   // Delete Handler
-  const handleDelete = (id: string, projTitle: string) => {
+  const handleDelete = async (id: string, projTitle: string) => {
     const updated = showcases.filter((p) => p.id !== id);
-    saveShowcases(updated);
+    await saveShowcases(updated);
     toast({
       title: "Deleted Showcase",
       description: `Removed project "${projTitle}" from portfolio.`,

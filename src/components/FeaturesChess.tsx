@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import feature1 from "@/assets/feature-1.gif";
 import feature2 from "@/assets/feature-2.gif";
 import { ArrowUpRight } from "lucide-react";
+import { getValue, setValue, initializeStore } from "@/lib/db";
 
 interface ShowcaseProject {
   id: string;
@@ -40,18 +41,21 @@ const FeaturesChess: React.FC = () => {
   const [showcases, setShowcases] = useState<ShowcaseProject[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("element_designs_projects");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const mapped = parsed.map((item: any) => ({
-        ...item,
-        description: item.description || `High-performance digital products and results-driven marketing solutions tailored exactly to your brand.`,
-      }));
-      setShowcases(mapped);
-    } else {
-      localStorage.setItem("element_designs_projects", JSON.stringify(DEFAULT_SHOWCASES));
-      setShowcases(DEFAULT_SHOWCASES);
-    }
+    const loadProjects = async () => {
+      await initializeStore();
+      const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
+      if (saved) {
+        const mapped = saved.map((item: any) => ({
+          ...item,
+          description: item.description || `High-performance digital products and results-driven marketing solutions tailored exactly to your brand.`,
+        }));
+        setShowcases(mapped);
+      } else {
+        await setValue("element_designs_projects", DEFAULT_SHOWCASES);
+        setShowcases(DEFAULT_SHOWCASES);
+      }
+    };
+    loadProjects();
   }, []);
 
   const rowVariants = {
