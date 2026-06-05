@@ -81,13 +81,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: 'Instrument Serif', serif;
-        font-size: 36px;
-        font-style: italic;
-        color: #ffffff;
         background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 70%);
         box-shadow: 0 0 40px rgba(255, 255, 255, 0.03);
         animation: pulseLogo 2s infinite ease-in-out;
+      }
+      .loader-logo img {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
       }
       .loader-text {
         color: #ffffff;
@@ -149,7 +150,7 @@
     <div id="global-loader">
       <div class="loader-content">
         <div class="loader-logo">
-          <span>E</span>
+          <img src="/logo-icon.png" alt="Element Designs Logo" />
         </div>
         <div class="loader-text">ELEMENT DESIGNS</div>
         <div class="loader-subtext">Reimagining Web Design...</div>
