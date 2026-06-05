@@ -4,7 +4,7 @@ import logoIcon from "@/assets/logo-icon.png";
 import { ArrowLeft, Trash2, PlusCircle, Layers, AlertCircle, LogOut, Mail } from "lucide-react";
 import { motion } from "motion/react";
 import { useToast } from "@/hooks/use-toast";
-import { getSession, authService } from "@/lib/supabase";
+import { getSession, authService, supabase } from "@/lib/supabase";
 import feature1 from "@/assets/feature-1.gif";
 import feature2 from "@/assets/feature-2.gif";
 import { getValue, setValue, initializeStore } from "@/lib/db";
@@ -69,12 +69,42 @@ const AdminPanel: React.FC = () => {
     const loadData = async () => {
       await initializeStore();
       
-      const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
-      if (saved) {
-        setShowcases(saved);
+      // Load from Supabase first
+      let dbProjects: ShowcaseProject[] = [];
+      try {
+        const { data, error } = await supabase
+          .from("portfolio_projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          dbProjects = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            websiteLink: item.website_link,
+            imageType: item.image_type,
+            imageUrl: item.image_url,
+            createdAt: item.created_at || new Date().toISOString()
+          }));
+        }
+      } catch (err) {
+        console.warn("Supabase project fetch failed, falling back to local database:", err);
+      }
+
+      if (dbProjects.length > 0) {
+        setShowcases(dbProjects);
+        await setValue("element_designs_projects", dbProjects);
       } else {
-        await setValue("element_designs_projects", DEFAULT_SHOWCASES);
-        setShowcases(DEFAULT_SHOWCASES);
+        const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
+        if (saved && saved.length > 0) {
+          setShowcases(saved);
+        } else {
+          await setValue("element_designs_projects", DEFAULT_SHOWCASES);
+          setShowcases(DEFAULT_SHOWCASES);
+        }
       }
 
       const savedLeads = await getValue<any[]>("element_designs_contact_submissions");
@@ -201,6 +231,26 @@ const AdminPanel: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
 
+    // Save to Supabase
+    try {
+      const { error } = await supabase
+        .from("portfolio_projects")
+        .insert([{
+          id: newShowcase.id,
+          title: newShowcase.title,
+          category: newShowcase.category,
+          website_link: newShowcase.websiteLink,
+          image_type: newShowcase.imageType,
+          image_url: newShowcase.imageUrl,
+          created_at: newShowcase.createdAt
+        }]);
+      
+      if (error) throw error;
+      console.log("Successfully published project to Supabase.");
+    } catch (err) {
+      console.warn("Failed to publish to Supabase, saving to local fallback storage:", err);
+    }
+
     const updated = [newShowcase, ...showcases];
     await saveShowcases(updated);
 
@@ -217,6 +267,19 @@ const AdminPanel: React.FC = () => {
 
   // Delete Handler
   const handleDelete = async (id: string, projTitle: string) => {
+    // Delete from Supabase
+    try {
+      const { error } = await supabase
+        .from("portfolio_projects")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+      console.log("Successfully deleted project from Supabase.");
+    } catch (err) {
+      console.warn("Failed to delete project from Supabase:", err);
+    }
+
     const updated = showcases.filter((p) => p.id !== id);
     await saveShowcases(updated);
     toast({

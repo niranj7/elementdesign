@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getSession, authService } from "@/lib/supabase";
+import { getSession, authService, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import logoIcon from "@/assets/logo-icon.png";
 import { ArrowLeft, LogOut, Laptop, Tablet, Smartphone, ExternalLink, RefreshCw, Eye, Code2, Globe } from "lucide-react";
@@ -36,33 +36,65 @@ const Works: React.FC = () => {
 
     const loadData = async () => {
       await initializeStore();
-      const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
-      if (saved && saved.length > 0) {
-        setShowcases(saved);
-        setActiveProject(saved[0]);
+      
+      // Load from Supabase first
+      let dbProjects: ShowcaseProject[] = [];
+      try {
+        const { data, error } = await supabase
+          .from("portfolio_projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          dbProjects = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            websiteLink: item.website_link,
+            imageType: item.image_type,
+            imageUrl: item.image_url,
+            createdAt: item.created_at || new Date().toISOString()
+          }));
+        }
+      } catch (err) {
+        console.warn("Supabase project fetch failed, falling back to local database:", err);
+      }
+
+      if (dbProjects.length > 0) {
+        setShowcases(dbProjects);
+        setActiveProject(dbProjects[0]);
+        await setValue("element_designs_projects", dbProjects);
       } else {
-        // Default fallback if empty
-        const defaultShowcases: ShowcaseProject[] = [
-          {
-            id: "1",
-            title: "High-Performance Website Development",
-            category: "Web Development",
-            websiteLink: "#contact",
-            imageType: "finlytic",
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "2",
-            title: "Data-Driven Digital Marketing",
-            category: "Digital Marketing",
-            websiteLink: "#contact",
-            imageType: "wealth",
-            createdAt: new Date().toISOString(),
-          },
-        ];
-        await setValue("element_designs_projects", defaultShowcases);
-        setShowcases(defaultShowcases);
-        setActiveProject(defaultShowcases[0]);
+        const saved = await getValue<ShowcaseProject[]>("element_designs_projects");
+        if (saved && saved.length > 0) {
+          setShowcases(saved);
+          setActiveProject(saved[0]);
+        } else {
+          // Default fallback if empty
+          const defaultShowcases: ShowcaseProject[] = [
+            {
+              id: "1",
+              title: "High-Performance Website Development",
+              category: "Web Development",
+              websiteLink: "#contact",
+              imageType: "finlytic",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "2",
+              title: "Data-Driven Digital Marketing",
+              category: "Digital Marketing",
+              websiteLink: "#contact",
+              imageType: "wealth",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          await setValue("element_designs_projects", defaultShowcases);
+          setShowcases(defaultShowcases);
+          setActiveProject(defaultShowcases[0]);
+        }
       }
     };
 
