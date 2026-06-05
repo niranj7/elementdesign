@@ -13,11 +13,29 @@ const ContactForm: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const getWhatsAppUrl = () => {
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER;
+    if (!whatsappNumber) return "";
+    const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
+    const text = `Hi, I just submitted an inquiry on your website:
+
+*Name:* ${name.trim()}
+*Email:* ${email.trim()}
+*Phone:* ${phone.trim()}
+*Project Type:* ${projectType}
+*Message:* ${message.trim()}`;
+    return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) return;
 
     setLoading(true);
+    
+    // Open a blank tab immediately to bypass browser popup blockers
+    const whatsappUrl = getWhatsAppUrl();
+    const whatsappWindow = whatsappUrl ? window.open("", "_blank") : null;
     
     const submission = {
       name: name.trim(),
@@ -63,6 +81,13 @@ const ContactForm: React.FC = () => {
       const localSubmissions = existing || [];
       localSubmissions.unshift(submission);
       await setValue("element_designs_contact_submissions", localSubmissions);
+
+      // Redirect the opened tab to WhatsApp
+      if (whatsappUrl && whatsappWindow) {
+        whatsappWindow.location.href = whatsappUrl;
+      } else if (whatsappWindow) {
+        whatsappWindow.close();
+      }
 
       setLoading(false);
       setSubmitted(true);
@@ -213,17 +238,37 @@ const ContactForm: React.FC = () => {
                     Thank you, {name.split(" ")[0]}!
                   </h3>
                   <p className="text-white/60 font-light text-sm sm:text-base max-w-sm mx-auto leading-relaxed">
-                    Your message has been received. Our team will review your project details and reach out within 24 hours.
+                    {import.meta.env.VITE_WHATSAPP_NUMBER 
+                      ? "Your message has been received! You can also chat with us directly on WhatsApp to get an instant response."
+                      : "Your message has been received. Our team will review your project details and reach out within 24 hours."}
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setSubmitted(false)}
-                  className="bg-white text-black font-body font-medium hover:bg-white/90 active:scale-[0.97] transition-all rounded-full px-6 py-2.5 text-xs shadow-lg mt-2 flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Send Another Inquiry
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+                  {import.meta.env.VITE_WHATSAPP_NUMBER && (
+                    <a
+                      href={getWhatsAppUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-600 text-white font-body font-medium hover:bg-emerald-500 active:scale-[0.97] transition-all rounded-full px-6 py-2.5 text-xs shadow-lg flex items-center gap-2 cursor-pointer border border-emerald-500/30"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Chat on WhatsApp
+                    </a>
+                  )}
+
+                  <button
+                    onClick={() => setSubmitted(false)}
+                    className={`${
+                      import.meta.env.VITE_WHATSAPP_NUMBER
+                        ? "bg-white/10 hover:bg-white/20 text-white border border-white/10"
+                        : "bg-white text-black hover:bg-white/90"
+                    } font-body font-medium active:scale-[0.97] transition-all rounded-full px-6 py-2.5 text-xs shadow-lg flex items-center gap-1.5 cursor-pointer`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Send Another Inquiry
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
